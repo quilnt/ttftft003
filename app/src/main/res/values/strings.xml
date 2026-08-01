@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">TFT Overlay</string>
+    <string name="accessibility_service_description">Hỗ trợ thao tác chạm tự động (Auto Clicker / Macro) cho TFT Overlay Companion.</string>
 </resources>

@@ -1,5 +1,7 @@
 package com.example.feature.overlay
 
+import com.example.feature.automation.TftAccessibilityService
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
@@ -24,6 +26,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -65,6 +69,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -187,7 +192,7 @@ fun ExpandedOverlayPanel(
     prefsRepo: OverlayPreferencesRepository
 ) {
     var selectedTabIndex by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Đội Hình", "Trang Bị", "Shop Odds", "Ghi Chú", "Tra Cứu")
+    val tabs = listOf("Đội Hình", "Gợi Ý", "Trang Bị", "Shop Odds", "Ghi Chú", "Tra Cứu", "Auto Click")
     val scope = rememberCoroutineScope()
 
     Card(
@@ -303,10 +308,12 @@ fun ExpandedOverlayPanel(
             ) {
                 when (selectedTabIndex) {
                     0 -> OverlayCompsTab(repository)
-                    1 -> OverlayItemsTab(repository)
-                    2 -> OverlayShopOddsTab(repository, prefsRepo)
-                    3 -> OverlayNotesTab()
-                    4 -> OverlayQuickSearchTab(repository)
+                    1 -> OverlayRecommendationTab(repository)
+                    2 -> OverlayItemsTab(repository)
+                    3 -> OverlayShopOddsTab(repository, prefsRepo)
+                    4 -> OverlayNotesTab()
+                    5 -> OverlayQuickSearchTab(repository)
+                    6 -> OverlayAutoClickTab()
                 }
             }
         }
@@ -875,3 +882,521 @@ fun OverlayQuickSearchTab(repository: TftRepository) {
         }
     }
 }
+
+@Composable
+fun OverlayRecommendationTab(repository: TftRepository) {
+    val comps by repository.metaCompositionsFlow.collectAsState(initial = emptyList())
+    var selectedCompId by remember { mutableStateOf(comps.firstOrNull()?.id ?: "") }
+    val activeComp = comps.find { it.id == selectedCompId } ?: comps.firstOrNull()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "💡 Gợi Ý Tướng & Trang Bị",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFFC8AA6E)
+            )
+            Text(
+                text = "Meta Advisor",
+                fontSize = 9.sp,
+                color = Color(0xFF38BDF8)
+            )
+        }
+        Text(
+            text = "Chọn đội hình mục tiêu để nhận đề xuất mua tướng & ghép đồ:",
+            fontSize = 9.sp,
+            color = Color(0xFF94A3B8)
+        )
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // Target Comp Selector
+        Text(
+            text = "Đội hình mục tiêu:",
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF38BDF8)
+        )
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.padding(vertical = 4.dp)
+        ) {
+            items(comps) { comp ->
+                val isSelected = comp.id == activeComp?.id
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isSelected) Color(0xFFC8AA6E) else Color(0xFF1E293B))
+                        .border(1.dp, if (isSelected) Color(0xFFF59E0B) else Color(0xFF334155), RoundedCornerShape(8.dp))
+                        .clickable { selectedCompId = comp.id }
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = comp.name,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isSelected) Color(0xFF0F172A) else Color(0xFFE2E8F0),
+                        maxLines = 1
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        if (activeComp != null) {
+            // Recommendation Cards
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B))
+            ) {
+                Column(modifier = Modifier.padding(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "🔥 Tướng Ưu Tiên Mua Từ Cửa Hàng",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFEAB308)
+                        )
+                        Text(
+                            text = activeComp.playstyle,
+                            fontSize = 8.sp,
+                            color = Color(0xFF94A3B8)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    activeComp.champions.take(5).forEach { champRef ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(Color(0xFF0F172A))
+                                .padding(6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = champRef.championName,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "(${champRef.cost} vàng)",
+                                        fontSize = 8.sp,
+                                        color = Color(0xFFEAB308)
+                                    )
+                                }
+                                Text(
+                                    text = if (champRef.isCarry) "★ Carry Chủ Lực" else if (champRef.isMainTank) "🛡️ Tank Chính" else "⚡ Kích Tộc/Hệ",
+                                    fontSize = 8.sp,
+                                    color = if (champRef.isCarry) Color(0xFF38BDF8) else if (champRef.isMainTank) Color(0xFF22C55E) else Color(0xFFA855F7)
+                                )
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(if (champRef.isCarry || champRef.isMainTank) Color(0xFF22C55E) else Color(0xFF0284C7))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = if (champRef.isCarry) "Ưu Tiên S" else "Ưu Tiên A",
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Item recommendation card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B))
+            ) {
+                Column(modifier = Modifier.padding(8.dp)) {
+                    Text(
+                        text = "⚔️ Trang Bị Tối Ưu Cho Chủ Lực",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF38BDF8)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "• Carry (${activeComp.carryChampionName}): Vô Song Kiếm, Ngọn Giáo Shojin, Găng Báo Thù",
+                        fontSize = 9.sp,
+                        color = Color(0xFFCBD5E1)
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "• Tank (${activeComp.tankChampionName}): Giáp Máu Warmog, Áo Choàng Gai, Vuốt Rồng",
+                        fontSize = 9.sp,
+                        color = Color(0xFFCBD5E1)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Strategic Roll/Level Advice
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B))
+            ) {
+                Column(modifier = Modifier.padding(8.dp)) {
+                    Text(
+                        text = "📈 Lộ Trình Lên Cấp & Quản Lý Vàng",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFC8AA6E)
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "• Xả vàng tìm ${activeComp.carryChampionName} ở cấp độ ${activeComp.rollLevel}.",
+                        fontSize = 9.sp,
+                        color = Color(0xFFCBD5E1)
+                    )
+                    Text(
+                        text = "• Giữ mốc 50 vàng lợi tức, roll khi thừa vàng trên 50.",
+                        fontSize = 9.sp,
+                        color = Color(0xFFCBD5E1)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun OverlayAutoClickTab() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = rememberCoroutineScope()
+    val isAccessibilityActive by TftAccessibilityService.isServiceActive.collectAsState()
+    val isAutoClicking by TftAccessibilityService.isAutoClicking.collectAsState()
+
+    var targetX by remember { mutableStateOf("250") }
+    var targetY by remember { mutableStateOf("1850") }
+    var interval by remember { mutableFloatStateOf(400f) }
+
+    var isAiAnalyzing by remember { mutableStateOf(false) }
+    var aiResult by remember { mutableStateOf<com.example.feature.automation.AiStrategyResult?>(null) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "⚡ Mini Auto Clicker & AI Strategist",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFFC8AA6E)
+            )
+            Text(
+                text = "AI Powered",
+                fontSize = 8.sp,
+                color = Color(0xFFA855F7),
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Text(
+            text = "Phân tích AI đề xuất hành động tối ưu Win Rate & chọc tự động",
+            fontSize = 8.sp,
+            color = Color(0xFF94A3B8)
+        )
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // AI Quick Advisor Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1B4B))
+        ) {
+            Column(modifier = Modifier.padding(6.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "🔮 AI Auto Strategy Coach",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFE0E7FF)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color(0xFF6366F1))
+                            .clickable(enabled = !isAiAnalyzing) {
+                                isAiAnalyzing = true
+                                scope.launch {
+                                    val res = com.example.feature.automation.TftAiStrategyAdvisor.analyzeAndRecommend(
+                                        targetCompName = "Kassadin Reroll",
+                                        gameStage = "Giai Đoạn 3 (Mid Game)",
+                                        currentGold = 50,
+                                        playerHp = 70,
+                                        streak = "Thắng 3",
+                                        objective = "TOP 1"
+                                    )
+                                    aiResult = res
+                                    isAiAnalyzing = false
+                                }
+                            }
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = if (isAiAnalyzing) "Đang phân tích..." else "⚡ Phân Tích AI",
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
+
+                aiResult?.let { res ->
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "🏆 Win Rate: ${res.winRateEstimate} | Macro: ${res.recommendedMacroType}",
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF38BDF8)
+                    )
+                    Text(
+                        text = res.summaryAdvice,
+                        fontSize = 8.sp,
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color(0xFFA855F7))
+                            .clickable(enabled = isAccessibilityActive) {
+                                targetX = res.targetX.toInt().toString()
+                                targetY = res.targetY.toInt().toString()
+                                interval = res.recommendedIntervalMs.toFloat()
+                                TftAccessibilityService.instance?.startAutoClickLoop(
+                                    x = res.targetX,
+                                    y = res.targetY,
+                                    intervalMs = res.recommendedIntervalMs,
+                                    totalClicks = res.recommendedClicksCount
+                                )
+                            }
+                            .padding(4.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("🚀 Chạy Macro AI Đề Xuất", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        if (!isAccessibilityActive) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF7F1D1D))
+            ) {
+                Column(modifier = Modifier.padding(6.dp)) {
+                    Text(
+                        text = "⚠️ Dịch Vụ Cảm Ứng Chưa Bật",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Text(
+                        text = "Cần bật Accessibility Service trong Cài Đặt để cho phép ứng dụng tự động chọc màn hình.",
+                        fontSize = 8.sp,
+                        color = Color(0xFFFECACA)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color(0xFFDC2626))
+                            .clickable { TftAccessibilityService.openAccessibilitySettings(context) }
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text("Bật Ngay Trong Cài Đặt", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+        }
+
+        // Target Preset Buttons
+        Text(text = "Chọn vị trí nút game:", fontSize = 9.sp, color = Color(0xFF38BDF8), fontWeight = FontWeight.Bold)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(Color(0xFF1E293B))
+                    .clickable { targetX = "250"; targetY = "1850" }
+                    .padding(6.dp)
+            ) {
+                Text("🔄 Nút Roll", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold)
+            }
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(Color(0xFF1E293B))
+                    .clickable { targetX = "250"; targetY = "1600" }
+                    .padding(6.dp)
+            ) {
+                Text("⬆️ Up Level", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold)
+            }
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(Color(0xFF1E293B))
+                    .clickable { targetX = "500"; targetY = "1850" }
+                    .padding(6.dp)
+            ) {
+                Text("🛒 Mua Ô 1", fontSize = 8.sp, color = Color.White, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // Target Coordinates Inputs
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("X (px):", fontSize = 8.sp, color = Color(0xFF94A3B8))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Color(0xFF1E293B))
+                        .padding(4.dp)
+                ) {
+                    Text(targetX, fontSize = 9.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Y (px):", fontSize = 8.sp, color = Color(0xFF94A3B8))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Color(0xFF1E293B))
+                        .padding(4.dp)
+                ) {
+                    Text(targetY, fontSize = 9.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Text("Tốc độ: ${interval.toInt()} ms/lần", fontSize = 8.sp, color = Color(0xFFCBD5E1))
+        androidx.compose.material3.Slider(
+            value = interval,
+            onValueChange = { interval = it },
+            valueRange = 150f..1500f,
+            colors = androidx.compose.material3.SliderDefaults.colors(
+                thumbColor = Color(0xFFC8AA6E),
+                activeTrackColor = Color(0xFFC8AA6E)
+            )
+        )
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // Action Buttons
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(Color(0xFF0284C7))
+                    .clickable(enabled = isAccessibilityActive) {
+                        val x = targetX.toFloatOrNull() ?: 250f
+                        val y = targetY.toFloatOrNull() ?: 1850f
+                        TftAccessibilityService.instance?.clickAt(x, y)
+                    }
+                    .padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Chạm 1 Lần", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            }
+
+            if (!isAutoClicking) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (isAccessibilityActive) Color(0xFF16A34A) else Color(0xFF475569))
+                        .clickable(enabled = isAccessibilityActive) {
+                            val x = targetX.toFloatOrNull() ?: 250f
+                            val y = targetY.toFloatOrNull() ?: 1850f
+                            TftAccessibilityService.instance?.startAutoClickLoop(x, y, interval.toLong())
+                        }
+                        .padding(vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("▶️ Bắt Đầu Auto", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color(0xFFDC2626))
+                        .clickable {
+                            TftAccessibilityService.instance?.stopAutoClickLoop()
+                        }
+                        .padding(vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("⏹️ Dừng Auto", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
+            }
+        }
+    }
+}
+

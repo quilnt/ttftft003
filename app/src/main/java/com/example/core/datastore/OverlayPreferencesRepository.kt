@@ -24,7 +24,9 @@ data class OverlaySettings(
     val language: String = "vi",
     val playerLevel: Int = 7,
     val riotApiKey: String = "",
-    val proxyBackendUrl: String = "https://tft-proxy-demo.workers.dev"
+    val proxyBackendUrl: String = "https://tft-proxy-demo.workers.dev",
+    val selectedClientVersion: String = "TFT_VNG",
+    val activeSetVersion: String = "Set 13 (Live)"
 )
 
 class OverlayPreferencesRepository(private val context: Context) {
@@ -40,6 +42,8 @@ class OverlayPreferencesRepository(private val context: Context) {
         private val KEY_PLAYER_LEVEL = intPreferencesKey("player_level")
         private val KEY_RIOT_API_KEY = stringPreferencesKey("riot_api_key")
         private val KEY_PROXY_URL = stringPreferencesKey("proxy_backend_url")
+        private val KEY_CLIENT_VERSION = stringPreferencesKey("selected_client_version")
+        private val KEY_ACTIVE_SET = stringPreferencesKey("active_set_version")
     }
 
     val overlaySettingsFlow: Flow<OverlaySettings> = context.dataStore.data.map { prefs ->
@@ -53,8 +57,22 @@ class OverlayPreferencesRepository(private val context: Context) {
             language = prefs[KEY_LANGUAGE] ?: "vi",
             playerLevel = prefs[KEY_PLAYER_LEVEL] ?: 7,
             riotApiKey = prefs[KEY_RIOT_API_KEY] ?: "",
-            proxyBackendUrl = prefs[KEY_PROXY_URL] ?: "https://tft-proxy-demo.workers.dev"
+            proxyBackendUrl = prefs[KEY_PROXY_URL] ?: "https://tft-proxy-demo.workers.dev",
+            selectedClientVersion = prefs[KEY_CLIENT_VERSION] ?: "TFT_VNG",
+            activeSetVersion = prefs[KEY_ACTIVE_SET] ?: "Set 13 (Live)"
         )
+    }
+
+    suspend fun updateClientVersion(version: String) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_CLIENT_VERSION] = version
+        }
+    }
+
+    suspend fun updateActiveSetVersion(setVersion: String) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_ACTIVE_SET] = setVersion
+        }
     }
 
     suspend fun updatePosition(x: Int, y: Int) {
