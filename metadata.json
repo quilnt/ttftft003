@@ -1,0 +1,6 @@
+{
+  "name": "TFT Overlay Companion",
+  "description": "Ứng dụng nổi TFT Companion hỗ trợ tra cứu đội hình Meta, trang bị, xác suất shop và lịch sử đấu.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
